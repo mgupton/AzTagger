@@ -1,40 +1,50 @@
 #
 #
 #
-# Set-Variable AT_CONFIG_FILE -option constant -Value "AzTagger.json"
-$AT_CONFIG_FILE = "AzTagger.json"
+# Set-Variable AT_TAG_INFO_FILE -option constant -Value "AzTagger.csv"
+$AT_TAG_INFO_FILE = "AzTagger.csv"
 
 function main() {
-    $config = load_config
+    $tag_info = get_tag_info
 
-    foreach ($asset in $config.assets) {
-        $existing_tags = get_existing_tags($asset.resource_id)
+    [Array]$resource_names = $tag_info | Select-Object -Unique -Property resource_name | Foreach-object {$_.resource_name}
+
+    $resources = get_resources $resource_names
+
+    foreach ($resource in $resources) {
+        $existing_tags = get_existing_tags $resource.id
         $new_tags = @{}
         $new_tags += $existing_tags
-        foreach ($tag in $asset.tags) {
-            if (-not (check_for_tags $existing_tags $tag.name $tag.value)) {
+
+        $specified_tags = $tag_info | Where-Object {$_.resource_name -eq $resource.name} |  ForEach-Object {@{"name" = $_.tag_name ; "value" = $_.tag_value}}
+
+        foreach ($tag in $specified_tags) {
+            if (-not $(check_for_tags $existing_tags $tag.name $tag.value)) {
                 $new_tags.Add($tag.name, $tag.value)
             }
         }
-        apply_tags $asset.resource_id $new_tags
+
+        apply_tags $resource.id $new_tags
     }
 }
 
-function load_config() {
-    $config = (Get-Content ".\${AT_CONFIG_FILE}" | Out-String | ConvertFrom-Json)
+function get_tag_info() {
+    $tag_info = $(Import-Csv ".\$AT_TAG_INFO_FILE")
 
-    return $config
+    return $tag_info
 }
 
-function get_vms() {
-    $ResourceIds = New-Object -TypeName "System.Collections.ArrayList"
-    $vms = get-AzVM
+function get_resources($resource_names) {
+    $resource_ids = @()
 
-    foreach ($vm in $vms) {
-        $ResourceIds.Add($vm.Id)
+    foreach ($name in $resource_names) {
+        
+        foreach ($id in $(Get-AzResource -Name $name).ResourceId) {
+            $resource_ids += @{"name" = $name; "id" = $id}
+        }
     }
 
-    return $ResourceIds
+    return $resource_ids
 }
 
 function get_existing_tags($ResourceId) {
@@ -45,9 +55,9 @@ function get_existing_tags($ResourceId) {
     return $tags
 }
 
-function apply_tags($ResourceId, $tag) {
+function apply_tags($ResourceId, $tags) {
     Write-Output "Applying tag"
-    New-AzTag  -ResourceId $ResourceId -Tag $tag
+    New-AzTag  -ResourceId $ResourceId -Tag $tags
 }
 
 function check_for_tags($existing_tags, $name, $value) {
