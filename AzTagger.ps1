@@ -1,7 +1,28 @@
 #
+# Created: 2021-5-24
+# Created By: Michael Gupton
+#
+# This script will apply tags to Azure resources based on the tags
+# specified in the CSV file AzTagger.csv in the current directory.
+#
+# The existing tags on the resources will be preserved.
+#
+# Dependencies:
+#
+#  - Azure Powershell extensions
+#  - An authenticated session with the Azure subscription.
+#
+#       Connect-AzAccount
+#       Select-AzSubscription -SubscriptionId <id>
 #
 #
-# Set-Variable AT_TAG_INFO_FILE -option constant -Value "AzTagger.csv"
+# The CSV file will have the following format.
+#
+# - resource_name,tag_name,tag_value
+#
+# - There will be a row for every tag.
+#
+
 $AT_TAG_INFO_FILE = "AzTagger.csv"
 
 function main() {
@@ -16,7 +37,7 @@ function main() {
         $new_tags = @{}
         $new_tags += $existing_tags
 
-        $specified_tags = $tag_info | Where-Object {$_.resource_name -eq $resource.name} |  ForEach-Object {@{"name" = $_.tag_name ; "value" = $_.tag_value}}
+        [Array]$specified_tags = $tag_info | Where-Object {$_.resource_name -eq $resource.name} |  ForEach-Object {@{"name" = $_.tag_name ; "value" = $_.tag_value}}
 
         foreach ($tag in $specified_tags) {
             if (-not $(check_for_tags $existing_tags $tag.name $tag.value)) {
