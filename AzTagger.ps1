@@ -41,11 +41,9 @@ function main() {
 
         foreach ($tag in $specified_tags) {
             if ($(check_for_tags -nameonly $true -existing_tags $existing_tags -name $tag.name)) {                
-                $new_tags.Remove($tag.name)
+                $new_tags.Remove($tag.name)            
             }
-        }
 
-        foreach ($tag in $specified_tags) {
             $new_tags.Add($tag.name, $tag.value)
         }
 
