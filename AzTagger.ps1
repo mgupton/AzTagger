@@ -73,7 +73,7 @@ function get_resources($resource_names) {
 function get_existing_tags($ResourceId) {
     $tags = $null
 
-    $tags = $(get-AzTag -ResourceId $ResourceId).Properties.TagsProperty)
+    $tags = $(get-AzTag -ResourceId $ResourceId).Properties.TagsProperty
     
     return $tags
 }
